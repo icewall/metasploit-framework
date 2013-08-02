@@ -27,7 +27,6 @@ class Metasploit3 < Msf::Auxiliary
 
 		register_options(
 			[
-				Opt::RPORT(80),
 				OptPath.new('USERPASS_FILE',  [ false, "File containing users and passwords separated by space, one pair per line",
 					File.join(Msf::Config.install_root, "data", "wordlists", "http_default_userpass.txt") ]),
 				OptPath.new('USER_FILE',  [ false, "File containing users, one per line",
@@ -90,7 +89,7 @@ class Metasploit3 < Msf::Auxiliary
 				return :skip_user
 			when /Invalid password/
 				vprint_status("#{@peer} - Username found: #{user}")
-			else /\<a href="process.php\?logout=1"\>/
+			else /\<a href="process\.php\?logout=1"\>/
 				print_good("#{@peer} - Successful login: \"#{user}:#{pass}\"")
 				report_auth_info({
 					:host        => rhost,
@@ -109,7 +108,7 @@ class Metasploit3 < Msf::Auxiliary
 	end
 
 	def run
-		@uri = target_uri
+		@uri = normalize_uri(target_uri.path)
 		@uri.path << "/" if @uri.path[-1, 1] != "/"
 		@peer = "#{rhost}:#{rport}"
 

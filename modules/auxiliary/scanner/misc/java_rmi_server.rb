@@ -1,8 +1,4 @@
 ##
-# $Id$
-##
-
-##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
 # web site for more information on licensing and terms of use.
@@ -19,10 +15,9 @@ class Metasploit3 < Msf::Auxiliary
 
 	def initialize
 		super(
-			'Name'        => 'Java RMI Server Endpoint Scanner',
-			'Version'     => '$Revision$',
+			'Name'        => 'Java RMI Server Insecure Endpoint Code Execution Scanner',
 			'Description' => 'Detect Java RMI endpoints',
-			'Authors'     => ['mihi', 'hdm'],
+			'Author'     => ['mihi', 'hdm'],
 			'License'     => MSF_LICENSE,
 			'References'     =>
 				[
@@ -95,14 +90,12 @@ class Metasploit3 < Msf::Auxiliary
 					report_service(:host => rhost, :port => rport, :name => "java-rmi", :info => "Class Loader: Disabled")
 				elsif buf.length > 0
 					print_good("#{rhost}:#{rport} Java RMI Endpoint Detected: Class Loader Enabled")
-					report_service(:host => rhost, :port => rport, :name => "java-rmi", :info => "Class Loader: Enabled")
+					svc = report_service(:host => rhost, :port => rport, :name => "java-rmi", :info => "Class Loader: Enabled")
 					report_vuln(
 						:host         => rhost,
-						:port         => rport,
-						:proto        => 'tcp',
-						:sname => (ssl ? 'https' : 'http'),
-						:name         => self.fullname,
-						:info         => "Class Loader: Enabled",
+						:service      => svc,
+						:name         => self.name,
+						:info         => "Module #{self.fullname} confirmed remote code execution via this RMI service",
 						:refs         => self.references
 					)
 				else

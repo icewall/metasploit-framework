@@ -13,26 +13,52 @@ class Metasploit4 < Msf::Post
 
 	def initialize(info={})
 		super( update_info( info,
-				'Name'          => 'Testing remote file manipulation',
+				'Name'          => 'Testing Remote File Manipulation',
 				'Description'   => %q{ This module will test Post::File API methods },
 				'License'       => MSF_LICENSE,
 				'Author'        => [ 'egypt'],
-				'Version'       => '$Revision$',
 				'Platform'      => [ 'windows', 'linux', 'java' ],
 				'SessionTypes'  => [ 'meterpreter', 'shell' ]
 			))
 	end
 
+	#
+	# Change directory into a place that we have write access.
+	#
+	# The +cleanup+ method will change it back
+	#
+	def setup
+		@old_pwd = pwd
+		tmp = (directory?("/tmp")) ? "/tmp" : "%TMP%"
+		vprint_status("Setup: changing working directory to #{tmp}")
+		cd(tmp)
+
+		super
+	end
+
 	def test_file
-		it "should test for existence" do
+		it "should test for file existence" do
 			ret = false
 			[
 				"c:\\boot.ini",
 				"c:\\pagefile.sys",
 				"/etc/passwd",
 				"/etc/master.passwd"
-			].each { |file|
-				ret = true if file_exist?(file)
+			].each { |path|
+				ret = true if file?(path)
+			}
+
+			ret
+		end
+
+		it "should test for directory existence" do
+			ret = false
+			[
+				"c:\\",
+				"/etc/",
+				"/tmp"
+			].each { |path|
+				ret = true if directory?(path)
 			}
 
 			ret
@@ -41,7 +67,7 @@ class Metasploit4 < Msf::Post
 		it "should create text files" do
 			write_file("pwned", "foo")
 
-			file_exist?("pwned")
+			file?("pwned")
 		end
 
 		it "should read the text we just wrote" do
@@ -73,6 +99,23 @@ class Metasploit4 < Msf::Post
 			file_rm("pwned")
 
 			not file_exist?("pwned")
+		end
+
+		it "should move files" do
+				# Make sure we don't have leftovers from a previous run
+				file_rm("meterpreter-test") rescue nil
+				file_rm("meterpreter-test-moved") rescue nil
+
+				# touch a new file
+				write_file("meterpreter-test", "")
+
+				rename_file("meterpreter-test", "meterpreter-test-moved")
+				res &&= exist?("meterpreter-test-moved")
+				res &&= !exist?("meterpreter-test")
+
+				# clean up
+				file_rm("meterpreter-test") rescue nil
+				file_rm("meterpreter-test-moved") rescue nil
 		end
 
 	end
@@ -113,6 +156,12 @@ class Metasploit4 < Msf::Post
 			bin == "\xde\xad\xbe\xef"
 		end
 
+	end
+
+	def cleanup
+		vprint_status("Cleanup: changing working directory back to #{@old_pwd}")
+		cd(@old_pwd)
+		super
 	end
 
 end

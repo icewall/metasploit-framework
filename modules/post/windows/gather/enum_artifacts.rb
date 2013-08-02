@@ -10,6 +10,7 @@ require 'msf/core'
 require 'msf/core/post/file'
 require 'msf/core/post/windows/registry'
 require 'yaml'
+require 'msf/core/auxiliary/report'
 
 class Metasploit3 < Msf::Post
 
@@ -26,7 +27,7 @@ class Metasploit3 < Msf::Post
 				matches are written to the loot. },
 			'License'       => MSF_LICENSE,
 			'Author'        => [ 'averagesecurityguy <stephen[at]averagesecurityguy.info>' ],
-			'Platform'      => [ 'windows' ],
+			'Platform'      => [ 'win' ],
 			'SessionTypes'  => [ 'meterpreter' ]
 		))
 
@@ -45,16 +46,9 @@ class Metasploit3 < Msf::Post
 		# Store any found artifacts so they can be written to loot
 		evidence = {}
 
-		# Check artifacts file path
-		filename = datastore['ARTIFACTS']
-		if not ::File.exists?(filename)
-			print_error("Artifacts file does not exist!")
-			return
-		end
-
 		# Load artifacts from yaml file. Artifacts are organized by what they
 		# are evidence of.
-		yaml = YAML::load_file(filename)
+		yaml = YAML::load_file(datastore['ARTIFACTS'])
 		yaml.each_key do |key|
 			print_status("Searching for artifacts of #{key}")
 			files = yaml[key]['files']
@@ -80,7 +74,7 @@ class Metasploit3 < Msf::Post
 					found << reg['key'] + '\\' + reg['val']
 				end
 			end
-			
+
 			# Did we find anything? If so store it in the evidence hash to be
 			# saved in the loot.
 			if found.empty?

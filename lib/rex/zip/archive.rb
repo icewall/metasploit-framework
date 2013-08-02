@@ -1,6 +1,4 @@
-##
-# $Id$
-##
+# -*- coding: binary -*-
 
 module Rex
 module Zip

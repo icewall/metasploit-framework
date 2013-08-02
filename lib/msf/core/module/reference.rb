@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 require 'msf/core'
 
 ###
@@ -94,7 +95,9 @@ class Msf::Module::SiteReference < Msf::Module::Reference
 		if (in_ctx_id == 'OSVDB')
 			self.site = 'http://www.osvdb.org/' + in_ctx_val.to_s
 		elsif (in_ctx_id == 'CVE')
-			self.site = 'http://cve.mitre.org/cgi-bin/cvename.cgi?name=' + in_ctx_val.to_s
+			self.site = "http://cvedetails.com/cve/#{in_ctx_val.to_s}/"
+		elsif (in_ctx_id == 'CWE')
+			self.site = "http://cwe.mitre.org/data/definitions/#{in_ctx_val.to_s}.html"
 		elsif (in_ctx_id == 'BID')
 			self.site = 'http://www.securityfocus.com/bid/' + in_ctx_val.to_s
 		elsif (in_ctx_id == 'MSB')

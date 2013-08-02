@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 require 'metasm'
 require 'rex/compat'
 require 'rex/ui/text/table'
@@ -57,7 +58,7 @@ class RopBase
 		data.gsub!("Address,Raw,Disassembly\n", '')
 
 		@gadgets = []
-		
+
 		data.each_line do |line|
 			addr, raw, disasm = line.split(',', 3)
 			if addr.nil? or raw.nil? or disasm.nil?
@@ -182,7 +183,7 @@ class RopCollect < RopBase
 
 			# color the remaining parts of the gadget
 			if colors and line.index("%bld%grn").nil?
-				asm << "%bld%grn" + line 
+				asm << "%bld%grn" + line
 			else
 				asm << line
 			end
@@ -194,16 +195,16 @@ class RopCollect < RopBase
 	end
 
 	def process_gadgets(rets, num)
-		ret = {}
+		ret     = {}
 		gadgets = []
-		tmp = []
+		tmp     = []
 		rets.each do |ea|
 			insn = @disassembler.disassemble_instruction(ea)
 			next if not insn
 
 			xtra = insn.bin_length
 
-			1.upto(num) do |x|
+			num.downto(0) do |x|
 				addr = ea - x
 
 				# get the disassembled instruction at this address
@@ -216,7 +217,7 @@ class RopCollect < RopBase
 
 				# get raw bytes
 				buf = @disassembler.read_raw_data(addr, x + xtra)
-				
+
 
 				# make sure disassembling forward leads to our instruction
 				next if not ends_with_addr(buf, addr, ea)
@@ -233,6 +234,7 @@ class RopCollect < RopBase
 				else
 					next
 				end
+
 				# otherwise, we create a new tailchunk and add it to the list
 				ret = {:file => @file, :address => ("0x%08x" % (ea - x)), :raw => buf, :disasm => dasm}
 				gadgets << ret

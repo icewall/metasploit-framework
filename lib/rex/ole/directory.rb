@@ -1,7 +1,4 @@
-##
-# $Id$
-# Version: $Revision$
-##
+# -*- coding: binary -*-
 
 ##
 # Rex::OLE - an OLE implementation
@@ -28,7 +25,7 @@ class Directory < DirEntry
 		@num_entries = 1
 	end
 
-	
+
 	# woop, recursive each
 	def yield_entries(de, &block)
 		block.call(de)

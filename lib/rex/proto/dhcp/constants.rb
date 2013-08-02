@@ -1,4 +1,4 @@
-# $Id$
+# -*- coding: binary -*-
 require 'rex/proto/dhcp'
 
 module Rex

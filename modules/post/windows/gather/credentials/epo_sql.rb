@@ -1,8 +1,4 @@
 ##
-# $Id$
-##
-
-##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
 # web site for more information on licensing and terms of use.
@@ -13,6 +9,7 @@ require 'msf/core'
 require 'rex'
 require 'msf/core/post/windows/registry'
 require "net/dns/resolver"
+require 'msf/core/auxiliary/report'
 
 class Metasploit3 < Msf::Post
 
@@ -29,8 +26,7 @@ class Metasploit3 < Msf::Post
 			},
 			'License'       => MSF_LICENSE,
 			'Author'        => ['Nathan Einwechter <neinwechter[at]gmail.com>'],
-			'Version'       => '$Revision$',
-			'Platform'      => [ 'windows' ],
+			'Platform'      => [ 'win' ],
 			'SessionTypes'  => [ 'meterpreter' ]
 		))
 	end
@@ -137,7 +133,7 @@ class Metasploit3 < Msf::Post
 			print_good("Domain: #{user_domain}");
 			full_user = "#{user_domain}\\#{user_name}"
 		end
-		print_good("User: #{user_name}")
+		print_good("User: #{full_user}")
 		print_good("Password: #{plaintext_passwd}")
 
 		if (db_ip)

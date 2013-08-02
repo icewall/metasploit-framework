@@ -1,4 +1,4 @@
-# $Id$
+# -*- coding: binary -*-
 require 'rex/proto/tftp'
 
 module Rex

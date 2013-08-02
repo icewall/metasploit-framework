@@ -1,8 +1,4 @@
 ##
-# $Id$
-##
-
-##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
 # web site for more information on licensing and terms of use.
@@ -27,7 +23,7 @@ class Metasploit3 < Msf::Auxiliary
 				'tag' a specified Virtual Machine. It does this by
 				logging a user event with user supplied text
 			},
-			'Author'         => ['TheLightCosine <thelightcosine[at]metasploit.com>'],
+			'Author'         => ['theLightCosine'],
 			'License'        => MSF_LICENSE
 		)
 
@@ -39,7 +35,7 @@ class Metasploit3 < Msf::Auxiliary
 				OptString.new('VM', [true, "The VM to try to Power On"]),
 				OptString.new('MSG', [true, "The message to put in the log", 'Pwned by Metasploit'])
 			], self.class)
-			
+
 		register_advanced_options([OptBool.new('SSL', [ false, 'Negotiate SSL for outgoing connections', true]),])
 	end
 

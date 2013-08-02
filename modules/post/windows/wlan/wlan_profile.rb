@@ -1,8 +1,4 @@
 ##
-# $Id$
-##
-
-##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
 # web site for more information on licensing and terms of use.
@@ -11,6 +7,7 @@
 
 require 'msf/core'
 require 'rex'
+require 'msf/core/auxiliary/report'
 
 class Metasploit3 < Msf::Post
 	include Msf::Auxiliary::Report
@@ -25,9 +22,8 @@ class Metasploit3 < Msf::Post
 				Windows XP we will get the PBKDF2 derived key.
 			},
 			'License'       => MSF_LICENSE,
-			'Author'        => ['TheLightCosine <thelightcosine[at]gmail.com>'],
-			'Version'       => '$Revision$',
-			'Platform'      => [ 'windows' ],
+			'Author'        => ['theLightCosine'],
+			'Platform'      => [ 'win' ],
 			'SessionTypes'  => [ 'meterpreter' ]
 		))
 	end
@@ -45,6 +41,11 @@ class Metasploit3 < Msf::Post
 			return
 		end
 		wlan_iflist = enum_interfaces(wlan_handle)
+
+		if wlan_iflist.empty?
+			print_status("No wireless interfaces")
+			return
+		end
 
 		#Take each enumerated interface and gets the profile information available on each one
 		wlan_iflist.each do |interface|
@@ -89,6 +90,7 @@ class Metasploit3 < Msf::Post
 		numifs = @host_process.memory.read(pointer,4)
 		numifs = numifs.unpack("V")[0]
 		interfaces = []
+		return [] if numifs.nil?
 
 		#Set the pointer ahead to the first element in the array
 		pointer = (pointer + 8)

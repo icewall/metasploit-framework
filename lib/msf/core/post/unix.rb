@@ -1,10 +1,13 @@
+# -*- coding: binary -*-
 
 module Msf
 class Post
 module Unix
 
+	#
 	# Returns an array of hashes each representing a user
 	# Keys are name, uid, gid, info, dir and shell
+	#
 	def get_users
 		users = []
 		etc_passwd = nil
@@ -33,8 +36,10 @@ module Unix
 		return users
 	end
 
+	#
 	# Returns an array of hashes each hash representing a user group
 	# Keys are name, gid and users
+	#
 	def get_groups
 		groups = []
 		cmd_out = read_file("/etc/group").split("\n")
@@ -49,7 +54,9 @@ module Unix
 		return groups
 	end
 
-	# returns all user directories found
+	#
+	# Enumerates the user directories in /Users or /home
+	#
 	def enum_user_directories
 		user_dirs = []
 
@@ -68,9 +75,9 @@ module Unix
 		end
 
 		user_dirs.flatten!
+		user_dirs.compact!
 		user_dirs.sort!
 		user_dirs.uniq!
-		user_dirs.compact!
 
 		user_dirs
 	end

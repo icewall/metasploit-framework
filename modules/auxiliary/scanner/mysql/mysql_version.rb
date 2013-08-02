@@ -1,8 +1,4 @@
 ##
-# $Id$
-##
-
-##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
 # web site for more information on licensing and terms of use.
@@ -23,7 +19,6 @@ class Metasploit3 < Msf::Auxiliary
 			'Description' => %q{
 				Enumerates the version of MySQL servers
 			},
-			'Version'     => '$Revision$',
 			'Author'      => 'kris katterjohn',
 			'License'     => MSF_LICENSE
 		)
@@ -44,6 +39,7 @@ class Metasploit3 < Msf::Auxiliary
 				return
 			end
 		rescue ::Rex::ConnectionError, ::EOFError
+			vprint_error("#{rhost}:#{rport} - Connection failed")
 			return
 		rescue ::Exception
 			print_error("Error: #{$!}")

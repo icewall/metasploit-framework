@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
-
-# $Id$
+# -*- coding: binary -*-
 
 module Rex
 module ImageSource

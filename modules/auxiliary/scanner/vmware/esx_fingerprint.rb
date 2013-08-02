@@ -1,8 +1,4 @@
 ##
-# $Id$
-##
-
-##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
 # web site for more information on licensing and terms of use.
@@ -23,12 +19,11 @@ class Metasploit3 < Msf::Auxiliary
 	def initialize
 		super(
 			'Name'           => 'VMWare ESX/ESXi Fingerprint Scanner',
-			'Version'        => '$Revision$',
 			'Description'    => %Q{
 				This module accesses the web API interfaces for VMware ESX/ESXi servers
 				and attempts to identify version information for that server.
 			},
-			'Author'         => ['TheLightCosine <thelightcosine[at]metasploit.com>'],
+			'Author'         => ['theLightCosine'],
 			'License'        => MSF_LICENSE
 		)
 
@@ -41,7 +36,7 @@ class Metasploit3 < Msf::Auxiliary
 
 
 	def run_host(ip)
-				soap_data = 
+			soap_data =
 			%Q|<env:Envelope xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:env="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
 			<env:Body>
 			<RetrieveServiceContent xmlns="urn:vim25">
@@ -51,7 +46,7 @@ class Metasploit3 < Msf::Auxiliary
 			</env:Envelope>|
 		begin
 			res = send_request_cgi({
-				'uri'     => datastore['URI'],
+				'uri'     => normalize_uri(datastore['URI']),
 				'method'  => 'POST',
 				'agent'   => 'VMware VI Client',
 				'data' =>  soap_data,

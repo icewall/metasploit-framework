@@ -1,6 +1,4 @@
-##
-# $Id$
-##
+# -*- coding: binary -*-
 
 #
 # Windows system error codes (0-499)

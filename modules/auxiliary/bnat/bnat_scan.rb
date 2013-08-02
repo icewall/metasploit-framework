@@ -1,12 +1,8 @@
-###
-# $Id$
-###
-
 ##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
 # web site for more information on licensing and terms of use.
-#	http://metasploit.com/
+#   http://metasploit.com/
 ##
 
 require 'msf/core'
@@ -18,7 +14,6 @@ class Metasploit3 < Msf::Auxiliary
 	def initialize
 		super(
 			'Name'         => 'BNAT Scanner',
-			'Version'      => '$Revision$',
 			'Description'  => %q{
 					This module is a scanner which can detect Broken NAT (network address translation)
 				implementations, which could result in a inability to reach ports on remote
@@ -89,7 +84,7 @@ class Metasploit3 < Msf::Auxiliary
 			p.tcp_src = rand(64511)+1024
 			p.tcp_seq = rand(64511)+1024
 			p.recalc
-			
+
 			ackbpf = "tcp [8:4] == 0x#{(p.tcp_seq + 1).to_s(16)}"
 			pcap.setfilter("tcp and tcp[13] == 18 and not host #{ip} and src port #{p.tcp_dst} and dst port #{p.tcp_src} and #{ackbpf}")
 			capture_sendto(p, ip)

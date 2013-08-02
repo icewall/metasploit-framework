@@ -1,8 +1,4 @@
 ##
-# $Id$
-##
-
-##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
 # web site for more information on licensing and terms of use.
@@ -23,14 +19,13 @@ class Metasploit3 < Msf::Auxiliary
 	def initialize
 		super(
 			'Name'           => 'VMWare Enumerate Permissions',
-			'Version'        => '$Revision$',
 			'Description'    => %Q{
 				This module will log into the Web API of VMWare and try to enumerate
 				all the user/group permissions. Unlike enum suers this is only
 				users and groups that specifically have permissions defined within
 				the VMware product
 			},
-			'Author'         => ['TheLightCosine <thelightcosine[at]metasploit.com>'],
+			'Author'         => ['theLightCosine'],
 			'License'        => MSF_LICENSE
 		)
 
@@ -59,7 +54,7 @@ class Metasploit3 < Msf::Auxiliary
 			else
 				esx_roles.each do |role|
 					role_map[role['roleId']] = {
-						"name" => role['name'], 
+						"name" => role['name'],
 						"system" => role['system'],
 						"summary" => role['info']['summary']
 					}

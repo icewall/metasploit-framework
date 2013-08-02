@@ -17,7 +17,7 @@ class Metasploit3 < Msf::Auxiliary
 		super(update_info(info,
 			'Name'           => 'Dolibarr ERP & CRM 3 Login Utility',
 			'Description'    => %q{
-				This module attempts to authenticate to a Dolibarr ERP/CRM's admin web interface, 
+				This module attempts to authenticate to a Dolibarr ERP/CRM's admin web interface,
 				and should only work against version 3.1.1 or older, because these versions do not
 				have any default protections against bruteforcing.
 			},
@@ -27,7 +27,6 @@ class Metasploit3 < Msf::Auxiliary
 
 		register_options(
 			[
-				Opt::RPORT(80),
 				OptPath.new('USERPASS_FILE',  [ false, "File containing users and passwords separated by space, one pair per line",
 					File.join(Msf::Config.install_root, "data", "wordlists", "http_default_userpass.txt") ]),
 				OptPath.new('USER_FILE',  [ false, "File containing users, one per line",
@@ -46,7 +45,7 @@ class Metasploit3 < Msf::Auxiliary
 		})
 
 		return [nil, nil] if not (res and res.headers['Set-Cookie'])
-		
+
 		# Get the session ID from the cookie
 		m = res.headers['Set-Cookie'].match(/(DOLSESSID_.+);/)
 		id = (m.nil?) ? nil : m[1]
@@ -113,7 +112,7 @@ class Metasploit3 < Msf::Auxiliary
 	end
 
 	def run
-		@uri = target_uri
+		@uri = normalize_uri(target_uri.path)
 		@uri.path << "/" if @uri.path[-1, 1] != "/"
 		@peer = "#{rhost}:#{rport}"
 

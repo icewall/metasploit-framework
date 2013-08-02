@@ -1,4 +1,4 @@
-# $Id$
+# -*- coding: binary -*-
 #
 # DHCP Server support written by scriptjunkie
 #

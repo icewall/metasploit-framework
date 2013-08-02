@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 # Copyright (c) 2010, patrickHVE@googlemail.com
 # All rights reserved.
 #
@@ -76,6 +77,7 @@ class Railgun
 		'netapi32',
 		'crypt32',
 		'wlanapi',
+		'wldap32'
 	].freeze
 
 	##
@@ -178,7 +180,7 @@ class Railgun
 	# cached dlls) an unfrozen copy is created and used henceforth for this
 	# instance.
 	#
-	def add_function(dll_name, function_name, return_type, params, windows_name=nil)
+	def add_function(dll_name, function_name, return_type, params, windows_name=nil, calling_conv="stdcall")
 
 		unless known_dll_names.include?(dll_name)
 			raise "DLL #{dll_name} not found. Known DLLs: #{PP.pp(known_dll_names, "")}"
@@ -195,7 +197,7 @@ class Railgun
 			dlls[dll_name] = dll
 		end
 
-		dll.add_function(function_name, return_type, params, windows_name)
+		dll.add_function(function_name, return_type, params, windows_name, calling_conv)
 	end
 
 	#

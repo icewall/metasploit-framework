@@ -1,6 +1,4 @@
-##
-# $Id: enum_imvu.rb 14100 2011-10-28 18:00:10Z thelightcosine $
-##
+# -*- coding: binary -*-
 
 ##
 # This file is part of the Metasploit Framework and may be subject to
@@ -14,6 +12,7 @@
 require 'msf/core'
 require 'msf/core/post/windows/registry'
 require 'msf/core/post/windows/user_profiles'
+require 'msf/core/auxiliary/report'
 
 class Metasploit3 < Msf::Post
 
@@ -34,8 +33,7 @@ class Metasploit3 < Msf::Post
 				'Shubham Dawra <shubham2dawra[at]gmail.com>' # www.SecurityXploded.com
 				],
 			'License'        => MSF_LICENSE,
-			'Version'        => '$Revision: 14100 $',
-			'Platform' => [ 'windows' ],
+			'Platform' => [ 'win' ],
 			'SessionTypes' => [ 'meterpreter' ]
 		))
 	end

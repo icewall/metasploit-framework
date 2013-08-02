@@ -1,6 +1,4 @@
-##
-# $Id: module.rb 12624 2011-05-15 23:51:53Z hdm $
-##
+# -*- coding: binary -*-
 
 module Msf
 module RPC

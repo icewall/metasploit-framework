@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 require 'xmlrpc/client'
 require 'msgpack'
 
@@ -11,7 +12,7 @@ module RPC
 
 class Client
 
-	attr_accessor :sock, :token, :info
+	attr_accessor :token, :info
 
 
 	def initialize(info={})
@@ -66,6 +67,7 @@ class Client
 		)
 
 		res = @cli.send_recv(req)
+		@cli.close
 
 		if res and [200, 401, 403, 500].include?(res.code)
 			resp = MessagePack.unpack(res.body)
@@ -81,8 +83,10 @@ class Client
 	end
 
 	def close
-		self.sock.close rescue nil
-		self.sock = nil
+		if @cli and @cli.conn?
+			@cli.close
+		end
+		@cli = nil
 	end
 
 end

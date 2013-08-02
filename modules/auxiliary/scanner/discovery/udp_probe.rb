@@ -1,8 +1,4 @@
 ##
-# $Id$
-##
-
-##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
 # web site for more information on licensing and terms of use.
@@ -21,7 +17,6 @@ class Metasploit3 < Msf::Auxiliary
 	def initialize
 		super(
 			'Name'        => 'UDP Service Prober',
-			'Version'     => '$Revision$',
 			'Description' => 'Detect common UDP services using sequential probes',
 			'Author'      => 'hdm',
 			'License'     => MSF_LICENSE
@@ -172,7 +167,7 @@ class Metasploit3 < Msf::Auxiliary
 					name = $1.dup
 					caps = $2.dup
 					name = name.gsub(/_+$/, '').gsub("\x00", '').strip
-					caps = caps.gsub(/_+$/, '').gsub("\x00", '').strip	
+					caps = caps.gsub(/_+$/, '').gsub("\x00", '').strip
 					data[:name] = name
 					data[:caps] = caps
 
@@ -183,13 +178,13 @@ class Metasploit3 < Msf::Auxiliary
 					if buff[2,1].unpack("C")[0] == 67
 						stat = "Available"
 					end
-			
+
 					if buff[2,1].unpack("C")[0] == 11
 						stat = "Busy"
 					end
 
 					data[:stat] = stat
-				end	
+				end
 
 				if data[:name]
 					inf << "Name: #{data[:name]} "
@@ -514,6 +509,6 @@ class Metasploit3 < Msf::Auxiliary
 
 	def probe_pkt_pca_nq(ip)
 		return ["NQ", 5632]
-	end	
+	end
 
 end

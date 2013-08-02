@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 require 'msf/core'
 
 module Msf
@@ -77,14 +78,6 @@ class Module
 		# The path from which the module was loaded.
 		#
 		attr_accessor :file_path
-
-		#
-		# Override the default Class#inspect which is useless for the way
-		# modules get loaded
-		#
-		def inspect
-			"#<Class for #{refname}>"
-		end
 	end
 
 	#
@@ -117,9 +110,7 @@ class Module
 	# hash.
 	#
 	def initialize(info = {})
-
 		@module_info_copy = info.dup
-
 
 		self.module_info = info
 		generate_uuid
@@ -186,9 +177,8 @@ class Module
 	#
 
 	def print_prefix
-		if(
-			datastore['TimestampOutput'] =~ /^(t|y|1)/i or
-			framework.datastore['TimestampOutput'] =~ /^(t|y|1)/i
+		if (datastore['TimestampOutput'] =~ /^(t|y|1)/i) || (
+			framework && framework.datastore['TimestampOutput'] =~ /^(t|y|1)/i
 		)
 			prefix = "[#{Time.now.strftime("%Y.%m.%d-%H:%M:%S")}] "
 
@@ -199,8 +189,9 @@ class Module
 			end
 
 			return prefix
+		else
+			return ''
 		end
-		''
 	end
 
 	def print_status(msg='')
@@ -212,6 +203,10 @@ class Module
 	end
 
 	def print_good(msg='')
+		super(print_prefix + msg)
+	end
+
+	def print_warning(msg='')
 		super(print_prefix + msg)
 	end
 
@@ -247,6 +242,10 @@ class Module
 	# Verbose version of #print_debug
 	def vprint_debug(msg)
 		print_debug(msg) if datastore['VERBOSE'] || framework.datastore['VERBOSE']
+	end
+	# Verbose version of #print_warning
+	def vprint_warning(msg)
+		print_warning(msg) if datastore['VERBOSE'] || framework.datastore['VERBOSE']
 	end
 
 	#
@@ -355,6 +354,16 @@ class Module
 	end
 
 	#
+	# Checks to see if the target is vulnerable, returning unsupported if it's
+	# not supported.
+	#
+	# This method is designed to be overriden by exploit modules.
+	#
+	def check
+		Msf::Exploit::CheckCode::Unsupported
+	end
+
+	#
 	# Returns the hash that describes this module's compatibilities.
 	#
 	def compat
@@ -390,7 +399,7 @@ class Module
 
 		nil
 	end
-	
+
 	#
 	# Returns the current workspace
 	#
@@ -616,7 +625,7 @@ class Module
 	def debugging?
 		(datastore['DEBUG'] || '') =~ /^(1|t|y)/i
 	end
-	
+
 	#
 	# Indicates whether the module supports IPv6. This is true by default,
 	# but certain modules require additional work to be compatible or are
@@ -669,9 +678,6 @@ class Module
 		k = res
 
 		refs = self.references.map{|x| [x.ctx_id, x.ctx_val].join("-") }
-		is_exploit   = (self.type == "exploit")
-		is_auxiliary = (self.type == "auxiliary")
-		is_post      = (self.type == "post")
 		is_server    = (self.respond_to?(:stance) and self.stance == "aggressive")
 		is_client    = (self.respond_to?(:stance) and self.stance == "passive")
 
@@ -708,9 +714,7 @@ class Module
 						when 'port'
 							match = [t,w] if self.datastore['RPORT'].to_s =~ r
 						when 'type'
-							match = [t,w] if (w == "exploit" and is_exploit)
-							match = [t,w] if (w == "auxiliary" and is_auxiliary)
-							match = [t,w] if (w == "post" and is_post)
+							match = [t,w] if Msf::MODULE_TYPES.any? { |modt| w == modt and self.type == modt }
 						when 'app'
 							match = [t,w] if (w == "server" and is_server)
 							match = [t,w] if (w == "client" and is_client)
@@ -730,7 +734,7 @@ class Module
 					return true
 				end
 			end
-			# Filter this module if we matched an exlusion keyword (-value)
+			# Filter this module if we matched an exclusion keyword (-value)
 			if mode == 1 and match
 				return true
 			end
@@ -894,10 +898,10 @@ protected
 	# them into one single hash.  As it stands, modules can define
 	# compatibility in their supplied info hash through:
 	#
-	#   Compat        - direct compat definitions
-	#   PayloadCompat - payload compatibilities
-	#   EncoderCompat - encoder compatibilities
-	#   NopCompat     - nop compatibilities
+	# Compat::        direct compat definitions
+	# PayloadCompat:: payload compatibilities
+	# EncoderCompat:: encoder compatibilities
+	# NopCompat::     nop compatibilities
 	#
 	# In the end, the module specific compatibilities are merged as sub-hashes
 	# of the primary Compat hash key to make checks more uniform.

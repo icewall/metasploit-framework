@@ -1,4 +1,4 @@
-# $Id$
+# -*- coding: binary -*-
 #
 # TFTP Server implementation according to:
 #

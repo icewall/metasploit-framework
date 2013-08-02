@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 require 'msf/core'
 require 'msf/base'
 require 'msf/ui'
@@ -139,7 +140,6 @@ class Driver < Msf::Ui::Driver
 			print_error("***")
 		end
 
-
 		begin
 			require 'openssl'
 		rescue ::LoadError
@@ -155,12 +155,6 @@ class Driver < Msf::Ui::Driver
 		# Re-enable output
 		self.disable_output = false
 
-		# Load additional modules as necessary
-		self.framework.modules.add_module_path(opts['ModulePath'], false) if opts['ModulePath']
-
-		# Load console-specific configuration
-		load_config(opts['Config'])
-
 		# Whether or not command passthru should be allowed
 		self.command_passthru = (opts['AllowCommandPassthru'] == false) ? false : true
 
@@ -174,12 +168,14 @@ class Driver < Msf::Ui::Driver
 
 		# Parse any specified database.yml file
 		if framework.db.usable and not opts['SkipDatabaseInit']
-		
+
 			# Append any migration paths necessary to bring the database online
 			if opts['DatabaseMigrationPaths']
-				opts['DatabaseMigrationPaths'].each {|m| framework.db.add_migration_path(m) }
+				opts['DatabaseMigrationPaths'].each do |migrations_path|
+					ActiveRecord::Migrator.migrations_paths << migrations_path
+				end
 			end
-		
+
 			# Look for our database configuration in the following places, in order:
 			#	command line arguments
 			#	environment variable
@@ -214,12 +210,32 @@ class Driver < Msf::Ui::Driver
 							print_error("")
 						end
 
-						print_error("Failed to connect to the database: #{framework.db.error} #{db.inspect} #{framework.db.error.backtrace}")
+						print_error("Failed to connect to the database: #{framework.db.error}")
+					else
+						self.framework.modules.refresh_cache_from_database
+
+						if self.framework.modules.cache_empty?
+							print_status("The initial module cache will be built in the background, this can take 2-5 minutes...")
+						end
 					end
 				end
 			end
 		end
 
+		# Initialize the module paths only if we didn't get passed a Framework instance
+		unless opts['Framework']
+			# Configure the framework module paths
+			self.framework.init_module_paths
+			self.framework.modules.add_module_path(opts['ModulePath']) if opts['ModulePath']
+
+			# Rebuild the module cache in a background thread
+			self.framework.threads.spawn("ModuleCacheRebuild", true) do
+				self.framework.modules.refresh_cache_from_module_files
+			end
+		end
+
+		# Load console-specific configuration (after module paths are added)
+		load_config(opts['Config'])
 
 		# Process things before we actually display the prompt and get rocking
 		on_startup(opts)
@@ -232,6 +248,13 @@ class Driver < Msf::Ui::Driver
 		else
 			# If the opt is nil here, we load ~/.msf3/msfconsole.rc
 			load_resource(opts['Resource'])
+		end
+
+		# Process any additional startup commands
+		if opts['XCommands'] and opts['XCommands'].kind_of? Array
+			opts['XCommands'].each { |c|
+				run_single(c)
+			}
 		end
 	end
 
@@ -290,7 +313,7 @@ class Driver < Msf::Ui::Driver
 
 		print_error("Test Error: #{tname} - #{ftype} - #{data}")
 	end
-	
+
 	#
 	# Emit a new jUnit XML output file representing a success
 	#
@@ -501,12 +524,14 @@ class Driver < Msf::Ui::Driver
 	#
 	def on_startup(opts = {})
 		# Check for modules that failed to load
-		if (framework.modules.failed.length > 0)
+		if framework.modules.module_load_error_by_path.length > 0
 			print_error("WARNING! The following modules could not be loaded!")
-			framework.modules.failed.each_pair do |file, err|
-				print_error("\t#{file}: #{err}")
+
+			framework.modules.module_load_error_by_path.each do |path, error|
+				print_error("\t#{path}: #{error}")
 			end
 		end
+
 		framework.events.on_ui_start(Msf::Framework::Revision)
 
 		run_single("banner") unless opts['DisableBanner']
@@ -528,7 +553,7 @@ class Driver < Msf::Ui::Driver
 		case var.downcase
 			when "payload"
 
-				if (framework and framework.modules.valid?(val) == false)
+				if (framework and framework.payloads.valid?(val) == false)
 					return false
 				elsif (active_module)
 					active_module.datastore.clear_non_user_defined
@@ -698,4 +723,3 @@ end
 end
 end
 end
-

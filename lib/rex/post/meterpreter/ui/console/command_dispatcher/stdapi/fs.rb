@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 require 'tempfile'
 require 'rex/post/meterpreter'
 
@@ -34,24 +35,58 @@ class Console::CommandDispatcher::Stdapi::Fs
 	# List of supported commands.
 	#
 	def commands
-		{
+		all = {
 			"cat"      => "Read the contents of a file to the screen",
 			"cd"       => "Change directory",
+			"del"      => "Delete the specified file",
 			"download" => "Download a file or directory",
 			"edit"     => "Edit a file",
+			"getlwd"   => "Print local working directory",
 			"getwd"    => "Print working directory",
+			"lcd"      => "Change local working directory",
+			"lpwd"     => "Print local working directory",
 			"ls"       => "List files",
 			"mkdir"    => "Make directory",
 			"pwd"      => "Print working directory",
-			"rmdir"    => "Remove directory",
-			"upload"   => "Upload a file or directory",
-			"lcd"      => "Change local working directory",
-			"getlwd"   => "Print local working directory",
-			"lpwd"     => "Print local working directory",
 			"rm"       => "Delete the specified file",
-			"del"      => "Delete the specified file",
-			"search"   => "Search for files"
+			"mv"	   => "Move source to destination",
+			"rmdir"    => "Remove directory",
+			"search"   => "Search for files",
+			"upload"   => "Upload a file or directory",
 		}
+
+		reqs = {
+			"cat"      => [ ],
+			"cd"       => [ "stdapi_fs_chdir" ],
+			"del"      => [ "stdapi_fs_rm" ],
+			"download" => [ ],
+			"edit"     => [ ],
+			"getlwd"   => [ ],
+			"getwd"    => [ "stdapi_fs_getwd" ],
+			"lcd"      => [ ],
+			"lpwd"     => [ ],
+			"ls"       => [ "stdapi_fs_stat", "stdapi_fs_ls" ],
+			"mkdir"    => [ "stdapi_fs_mkdir" ],
+			"pwd"      => [ "stdapi_fs_getwd" ],
+			"rmdir"    => [ "stdapi_fs_delete_dir" ],
+			"rm"       => [ "stdapi_fs_delete_file" ],
+			"mv"       => [ "stdapi_fs_file_move" ],
+			"search"   => [ "stdapi_fs_search" ],
+			"upload"   => [ ],
+		}
+
+		all.delete_if do |cmd, desc|
+			del = false
+			reqs[cmd].each do |req|
+				next if client.commands.include? req
+				del = true
+				break
+			end
+
+			del
+		end
+
+		all
 	end
 
 	#
@@ -65,18 +100,18 @@ class Console::CommandDispatcher::Stdapi::Fs
 	# Search for files.
 	#
 	def cmd_search( *args )
-	
+
 		root    = nil
 		glob    = nil
 		recurse = true
-		
+
 		opts = Rex::Parser::Arguments.new(
 			"-h" => [ false, "Help Banner." ],
 			"-d" => [ true,  "The directory/drive to begin searching from. Leave empty to search all drives. (Default: #{root})" ],
 			"-f" => [ true,  "The file pattern glob to search for. (e.g. *secret*.doc?)" ],
 			"-r" => [ true,  "Recursivly search sub directories. (Default: #{recurse})" ]
 		)
-		
+
 		opts.parse(args) { | opt, idx, val |
 			case opt
 				when "-h"
@@ -92,14 +127,14 @@ class Console::CommandDispatcher::Stdapi::Fs
 					recurse = false if( val =~ /^(f|n|0)/i )
 			end
 		}
-		
+
 		if( not glob )
 			print_error( "You must specify a valid file glob to search for, e.g. >search -f *.doc" )
 			return
 		end
-		
+
 		files = client.fs.file.search( root, glob, recurse )
-		
+
 		if( not files.empty? )
 			print_line( "Found #{files.length} result#{ files.length > 1 ? 's' : '' }..." )
 			files.each do | file |
@@ -112,9 +147,9 @@ class Console::CommandDispatcher::Stdapi::Fs
 		else
 			print_line( "No files matching your search were found." )
 		end
-		
+
 	end
-	
+
 	#
 	# Reads the contents of a file and prints them to the screen.
 	#
@@ -128,11 +163,13 @@ class Console::CommandDispatcher::Stdapi::Fs
 			print_error("#{args[0]} is a directory")
 		else
 			fd = client.fs.file.new(args[0], "rb")
-
-			until fd.eof?
-				print(fd.read)
+			begin
+				until fd.eof?
+					print(fd.read)
+				end
+			# EOFError is raised if file is empty, do nothing, just catch
+			rescue EOFError
 			end
-
 			fd.close
 		end
 
@@ -169,7 +206,7 @@ class Console::CommandDispatcher::Stdapi::Fs
 
 		return true
 	end
-	
+
 	#
 	# Delete the specified file.
 	#
@@ -183,8 +220,26 @@ class Console::CommandDispatcher::Stdapi::Fs
 
 		return true
 	end
-	
+
 	alias :cmd_del :cmd_rm
+
+        #   
+        # Move source to destination
+        #   
+        def cmd_mv(*args)
+                if (args.length < 2)
+                        print_line("Usage: mv oldfile newfile")
+                        return true
+                end 
+
+                client.fs.file.mv(args[0],args[1])
+
+                return true
+        end 
+
+        alias :cmd_move :cmd_mv
+	alias :cmd_rename :cmd_mv
+
 
 	def cmd_download_help
 		print_line "Usage: download [options] src1 src2 src3 ... destination"
@@ -192,7 +247,7 @@ class Console::CommandDispatcher::Stdapi::Fs
 		print_line "Downloads remote files and directories to the local machine."
 		print_line @@download_opts.usage
 	end
-	
+
 	#
 	# Downloads a file or directory from the remote machine to the local
 	# machine.
@@ -250,7 +305,7 @@ class Console::CommandDispatcher::Stdapi::Fs
 				}
 			end
 		}
-		
+
 		return true
 	end
 
@@ -289,7 +344,7 @@ class Console::CommandDispatcher::Stdapi::Fs
 		end
 
 		# Get rid of that pesky temporary file
-		temp_path.close(true)
+		::File.delete(temp_path) rescue nil
 	end
 
 	#
@@ -454,7 +509,7 @@ class Console::CommandDispatcher::Stdapi::Fs
 				}
 			end
 		}
-		
+
 		return true
 	end
 

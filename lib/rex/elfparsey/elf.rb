@@ -1,6 +1,5 @@
 #!/usr/bin/env ruby
-
-# $Id$
+# -*- coding: binary -*-
 
 require 'rex/elfparsey/elfbase'
 require 'rex/elfparsey/exceptions'

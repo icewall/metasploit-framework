@@ -1,3 +1,4 @@
+# -*- coding: binary -*-
 module Msf
 module Simple
 
@@ -40,11 +41,12 @@ module Auxiliary
 	# 	Whether or not the exploit should be run in the context of a background
 	# 	job.
 	#
-	def self.run_simple(omod, opts = {})
+	def self.run_simple(omod, opts = {}, &block)
 
 		# Clone the module to prevent changes to the original instance
 		mod = omod.replicant
 		Msf::Simple::Framework.simplify_module( mod, false )
+		yield(mod) if block_given?
 
 		# Import options from the OptionStr or Option hash.
 		mod._import_extra_options(opts)
@@ -75,19 +77,53 @@ module Auxiliary
 				Proc.new { |ctx_| self.job_cleanup_proc(ctx_) }
 			)
 			# Propagate this back to the caller for console mgmt
-			omod.job_id = mod.job_id			
+			omod.job_id = mod.job_id
 		else
 			self.job_run_proc(ctx)
 			self.job_cleanup_proc(ctx)
 		end
+
 	end
 
 	#
 	# Calls the class method.
 	#
-	def run_simple(opts = {})
-		Msf::Simple::Auxiliary.run_simple(self, opts)
+	def run_simple(opts = {}, &block)
+		Msf::Simple::Auxiliary.run_simple(self, opts, &block)
 	end
+
+	#
+	# Initiates a check, setting up the exploit to be used.  The following
+	# options can be specified:
+	#
+	# LocalInput
+	#
+	# 	The local input handle that data can be read in from.
+	#
+	# LocalOutput
+	#
+	# 	The local output through which data can be displayed.
+	#
+	def self.check_simple(mod, opts)
+		if opts['LocalInput']
+			mod.init_ui(opts['LocalInput'], opts['LocalOutput'])
+		end
+
+		# Validate the option container state so that options will
+		# be normalized
+		mod.validate
+
+		# Run check
+		mod.check
+	end
+
+	#
+	# Calls the class method.
+	#
+	def check_simple(opts)
+		Msf::Simple::Auxiliary.check_simple(self, opts)
+	end
+
 
 protected
 
